@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Caregiver Industry Survey</title>
+    <!-- Load Supabase -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/supabase/2.39.7/supabase.min.js"></script>
+    <!-- Load configuration -->
+    <script src="config.js"></script>
+    <!-- Rest of head content... -->
+</head>
+<body>
+    <!-- Previous HTML content remains the same -->
+
+    <script>
+        // Initialize Supabase client
+        const supabase = supabase.createClient(SUPABASE_CONFIG.URL, SUPABASE_CONFIG.ANON_KEY);
+
+        // Form validation
+        function validateEmail(email) {
+            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return re.test(email);
+        }
+
+        function validatePhone(phone) {
+            // NZ phone number validation
+            const re = /^(\+?64|0)[2-9]\d{7,9}$/;
+            return re.test(phone);
+        }
+
+        // Form submission for caregivers
+        async function submitCaregiverForm(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            
+            // Validate email and phone
+            const email = formData.get('email');
+            const phone = formData.get('phone');
+            
+            if (!validateEmail(email)) {
+                alert('Please enter a valid email address');
+                return;
+            }
+            
+            if (!validatePhone(phone)) {
+                alert('Please enter a valid NZ phone number');
+                return;
+            }
+
+            // Convert FormData to object
+            const formObject = {};
+            formData.forEach((value, key) => {
+                if (key.endsWith('[]')) {
+                    // Handle array fields
+                    const baseKey = key.slice(0, -2);
+                    if (!formObject[baseKey]) formObject[baseKey] = [];
+                    formObject[baseKey].push(value);
+                } else {
+                    formObject[key] = value;
+                }
+            });
+
+            // Handle checkboxes
+            formObject.health_insurance = form.querySelector('[name="health_insurance"]').checked;
+            formObject.paid_time_off = form.querySelector('[name="paid_time_off"]').checked;
+            formObject.retirement_benefits = form.querySelector('[name="retirement_benefits"]').checked;
+            formObject.travel_allowance = form.querySelector('[name="travel_allowance"]').checked;
+
+            try {
+                const { data, error } = await supabase
+                    .from('caregiver_responses')
+                    .insert([formObject]);
+
+                if (error) throw error;
+                
+                alert('Thanks for your feedback!');
+                form.reset();
+                // Redirect back to selection screen
+                document.getElementById('caregiver-form').classList.add('hidden');
+                document.getElementById('survey-selector').classList.remove('hidden');
+            } catch (error) {
+                alert('Something went wrong. Please try again.');
+                console.error(error);
+            }
+        }
+
+        // Form submission for recipients
+        async function submitRecipientForm(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            
+            // Similar validation as caregiver form
+            const email = formData.get('email');
+            const phone = formData.get('phone');
+            
+            if (!validateEmail(email)) {
+                alert('Please enter a valid email address');
+                return;
+            }
+            
+            if (!validatePhone(phone)) {
+                alert('Please enter a valid NZ phone number');
+                return;
+            }
+
+            // Convert FormData to object
+            const formObject = {};
+            formData.forEach((value, key) => {
+                formObject[key] = value;
+            });
+
+            // Handle checkboxes for discovery methods
+            formObject.found_through_agency = form.querySelector('[name="found_through_agency"]').checked;
+            formObject.found_through_online = form.querySelector('[name="found_through_online"]').checked;
+            formObject.found_through_referral = form.querySelector('[name="found_through_referral"]').checked;
+            formObject.found_through_social_media = form.querySelector('[name="found_through_social_media"]').checked;
+            formObject.found_through_community = form.querySelector('[name="found_through_community"]').checked;
+
+            // Collect friend emails
+            const friendEmails = Array.from(form.querySelectorAll('.friend-email'))
+                .map(input => input.value)
+                .filter(email => email && validateEmail(email));
+            formObject.friend_emails = JSON.stringify(friendEmails);
+
+            try {
+                const { data, error } = await supabase
+                    .from('recipient_responses')
+                    .insert([formObject]);
+
+                if (error) throw error;
+                
+                alert('Chur! Thanks for your feedback!');
+                form.reset();
+                // Redirect back to selection screen
+                document.getElementById('recipient-form').classList.add('hidden');
+                document.getElementById('survey-selector').classList.remove('hidden');
+            } catch (error) {
+                alert('Oops! Something went wrong. Please try again.');
+                console.error(error);
+            }
+        }
+
+        // Previous showForm function remains the same
+		// Show/hide forms
+function showForm(formId) {
+    // Hide all forms first
+    document.getElementById('caregiver-form').classList.add('hidden');
+    document.getElementById('recipient-form').classList.add('hidden');
+    document.getElementById('survey-selector').classList.add('hidden');
+    
+    // Show selected form
+    document.getElementById(formId).classList.remove('hidden');
+}
+
+// Add event listener for partial funding details visibility
+document.getElementById('funding_source').addEventListener('change', function(e) {
+    const partialFundingDetails = document.getElementById('partial-funding-details');
+    partialFundingDetails.style.display = e.target.value === 'partially_funded' ? 'block' : 'none';
+};		
+    </script>
+</body>
+</html>
